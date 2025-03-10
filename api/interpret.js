@@ -1,31 +1,78 @@
+// api/interpret.js
 const axios = require('axios');
 
-module.exports = async function handler(req, res) {
-    console.log("收到请求: ", req.method, req.body);
+// In-memory storage (will reset on deployment/restarts)
+// For production, use a database like MongoDB, Redis, etc.
+const jobStore = new Map();
 
-    // Rest of your code remains the same
-    
-    // 允许跨域
+module.exports = async function handler(req, res) {
+    // Allow CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    // 处理 CORS 预检请求
+    // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return res.status(200).end();
     }
 
-    // Only allow POST requests
-    if (req.method !== "POST") {
-        return res.status(405).json({ error: "Method Not Allowed" });
+    // GET: Check job status
+    if (req.method === "GET") {
+        const jobId = req.query.jobId;
+        
+        if (!jobId) {
+            return res.status(400).json({ error: "Missing jobId parameter" });
+        }
+
+        if (!jobStore.has(jobId)) {
+            return res.status(404).json({ error: "Job not found" });
+        }
+
+        const job = jobStore.get(jobId);
+        return res.status(200).json(job);
     }
 
-    const { question, cards = [] } = req.body;
-    if (!question || !Array.isArray(cards) || cards.length === 0) {
-        return res.status(400).json({ error: "需要问题和至少一张塔罗牌" });
+    // POST: Create new job
+    if (req.method === "POST") {
+        const { question, cards } = req.body;
+
+        if (!question || !Array.isArray(cards) || cards.length === 0) {
+            return res.status(400).json({ error: "需要问题和至少一张塔罗牌" });
+        }
+
+        // Generate a random job ID
+        const jobId = Math.random().toString(36).substring(2, 15);
+        
+        // Create job entry
+        jobStore.set(jobId, {
+            status: "pending",
+            created: new Date().toISOString(),
+            question,
+            cards
+        });
+
+        // Start processing the job in the background (don't await)
+        processJob(jobId, question, cards);
+
+        // Return the job ID immediately
+        return res.status(202).json({ 
+            jobId,
+            message: "Job created successfully. Poll for results."
+        });
     }
 
+    return res.status(405).json({ error: "Method Not Allowed" });
+};
+
+async function processJob(jobId, question, cards) {
     try {
+        // Update job status
+        jobStore.set(jobId, { 
+            ...jobStore.get(jobId), 
+            status: "processing" 
+        });
+
+        // Make API call to SiliconFlow
         const response = await axios.post(
             'https://api.siliconflow.cn/v1/chat/completions',
             {
@@ -43,7 +90,7 @@ module.exports = async function handler(req, res) {
                     }
                 ],
                 stream: false,
-                max_tokens: 200,
+                max_tokens: 20000,
                 temperature: 0.7,
                 top_p: 0.7,
                 top_k: 50,
@@ -53,23 +100,37 @@ module.exports = async function handler(req, res) {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.API_KEY}`
-                }
+                },
+                timeout: 25000 // 25 second timeout
             }
         );
 
-        // Parse API response
-        const data = response.data;
-        console.log("真实 API 返回:", data);
-
-        // Forward the API response to the frontend
-        return res.status(200).json({
-            result: data.choices[0].message.content
+        // Store successful result
+        jobStore.set(jobId, {
+            ...jobStore.get(jobId),
+            status: "completed",
+            result: response.data.choices[0].message.content,
+            completed: new Date().toISOString()
         });
+
+        console.log(`Job ${jobId} completed successfully`);
     } catch (error) {
-        console.error("调用真实 API 失败:", error);
-        return res.status(500).json({ 
-            error: "服务器错误，无法访问真实 API",
-            details: error.message 
+        console.error(`Error processing job ${jobId}:`, error.message);
+        
+        // Store error in job
+        jobStore.set(jobId, {
+            ...jobStore.get(jobId),
+            status: "failed",
+            error: error.message || "Unknown error occurred",
+            completed: new Date().toISOString()
         });
     }
-};
+
+    // Set expiration (clean up after 1 hour)
+    setTimeout(() => {
+        if (jobStore.has(jobId)) {
+            jobStore.delete(jobId);
+            console.log(`Job ${jobId} expired and removed from store`);
+        }
+    }, 60 * 60 * 1000);
+}
