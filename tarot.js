@@ -246,7 +246,7 @@ function addDrawnCard(tarotCard, isReversed) {
 
 async function getAIInterpretation() {
     aiResponse.style.display = 'block';
-    aiResponse.innerHTML = `<p style="color: gray;">正在解析中...</p>`;  // 添加提示
+    aiResponse.innerHTML = `<p style="color: gray;">🔮 正在解读中，请稍候...</p>`;
 
     try {
         const requestData = {
@@ -257,10 +257,9 @@ async function getAIInterpretation() {
                 description: card.isReversed ? card.card.reversedDescription : card.card.description
             }))
         };
-        
-        console.log("塔罗牌解读请求:", requestData);
 
-        // 发送 API 请求获取 jobId
+        console.log("📨 发送解读请求:", requestData);
+
         const response = await fetch("/api/interpret", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -268,50 +267,15 @@ async function getAIInterpretation() {
         });
 
         const responseData = await response.json();
-        if (!responseData.jobId) {
-            throw new Error("API 没有返回 jobId");
+        if (!responseData.result) {
+            throw new Error("API 没有返回解读内容");
         }
 
-        console.log("收到 jobId:", responseData.jobId);
-        const jobId = responseData.jobId;
-
-        let result;
-        let retryCount = 0;
-        while (retryCount < 30) { // 最多轮询 60 秒（2 秒间隔）
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            aiResponse.innerHTML = `<p style="color: gray;">正在解析中${".".repeat((retryCount % 3) + 1)}</p>`; // 动态点点点效果
-
-            const jobResponse = await fetch(`/api/interpret?jobId=${jobId}`);
-            const data = await jobResponse.json();
-
-            if (data.status === 'completed') {
-                result = data.result;
-                console.log("Raw AI response data:", result);
-
-                if (!result || result.trim() === '') {
-                    throw new Error('收到空的解读结果');
-                }
-
-                aiResponse.innerHTML = `<pre>${result}</pre>`;
-                break;
-            } else if (data.status === 'failed') {
-                throw new Error(`解读失败: ${data.error}`);
-            }
-
-            retryCount++;
-        }
-
-        if (!result) {
-            throw new Error("API 轮询超时，未能获取解读结果");
-        }
-
-        setTimeout(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }, 100);
+        console.log("✅ AI 解读完成:", responseData.result);
+        aiResponse.innerHTML = `<pre>${responseData.result}</pre>`;
 
     } catch (error) {
-        console.error('解读错误:', error);
+        console.error("❌ 解读错误:", error);
         aiResponse.innerHTML = `<p style="color: red;">解读失败: ${error.message || '服务器连接错误'}</p>`;
     }
 }
