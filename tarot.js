@@ -264,7 +264,7 @@ async function getAIInterpretation() {
         console.log("塔罗牌解读请求:", requestBody);
 
         // Make API request to backend server
-        const response = await fetch('http://localhost:3000/api/interpret', {
+        const response = await fetch('https://tarot-reading-tawny.vercel.app/api/interpret', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
