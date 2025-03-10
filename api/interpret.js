@@ -70,4 +70,16 @@ export default async function handler(req, res) {
             details: error.message
         });
     }
+} 
+try {
+    // Your existing code
+} catch (error) {
+    console.error("详细错误:", error);
+    console.error("错误堆栈:", error.stack);
+    console.error("错误响应:", error.response?.data);
+    return res.status(500).json({ 
+        error: "服务器错误，无法访问真实 API",
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
 }
