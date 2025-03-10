@@ -242,6 +242,7 @@ body {
     display: none;
     /* 换行处理 */
     white-space: pre-wrap;
+    max-width: 100%;
     /* overflow-x: hidden; 彻底隐藏横向滚动条 */
 }
 
