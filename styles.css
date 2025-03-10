@@ -233,7 +233,7 @@ body {
     font-size: 14px;
     line-height: 1.6;
     margin-top: 10px;
-    word-wrap: break-word;
+    /* word-wrap: break-word; */
     /* Ensure text wraps */
     max-height: none;
     /* Remove any height restriction */
@@ -242,8 +242,6 @@ body {
     display: none;
     /* 换行处理 */
     white-space: pre-wrap;
-    max-width: 100%;
-    /* overflow-x: hidden; 彻底隐藏横向滚动条 */
 }
 
 /* 定义滚动条样式 */
