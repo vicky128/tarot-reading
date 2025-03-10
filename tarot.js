@@ -244,14 +244,13 @@ function addDrawnCard(tarotCard, isReversed) {
     });
 }
 
+// In tarot.js, replace the getAIInterpretation function with this:
 async function getAIInterpretation() {
-    // Display loading indicator in UI
     aiResponse.style.display = 'block';
-    aiResponse.innerHTML = '<div class="loading-dots">正在解读中</div>';
-
+    
     try {
         // Prepare request data
-        const requestBody = {
+        const requestData = {
             question: chatInput.value.trim() || "无特定问题",
             cards: drawnCards.map(card => ({
                 name: card.card.name,
@@ -259,105 +258,17 @@ async function getAIInterpretation() {
                 description: card.isReversed ? card.card.reversedDescription : card.card.description
             }))
         };
-
-        // Log the data to browser console for debugging
-        console.log("塔罗牌解读请求:", requestBody);
-
-        // API base URL
-        const apiBaseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'https://tarot-reading-git-master-vivis-projects-121260c4.vercel.app/api'
-            : '/api';
-
-        // Step 1: Submit the job
-        const submitResponse = await fetch(`${apiBaseUrl}/interpret`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        const jobData = await submitResponse.json();
         
-        if (!submitResponse.ok) {
-            throw new Error(jobData.error || '提交解读任务失败');
-        }
-
-        const jobId = jobData.jobId;
+        console.log("塔罗牌解读请求:", requestData);
         
-        // Update loading message to show progress
-        const loadingElement = document.querySelector('.loading-dots');
-        loadingElement.textContent = '解读中，请稍候...';
+        // Use the client.js function to handle the interpretation
+        await getCardInterpretation(requestData.question, requestData.cards);
         
-        // Add animation to loading indicator
-        const dots = ['', '.', '..', '...'];
-        let dotIndex = 0;
-        const updateDots = setInterval(() => {
-            dotIndex = (dotIndex + 1) % dots.length;
-            const baseText = '解读中，请稍候';
-            loadingElement.textContent = baseText + dots[dotIndex];
-        }, 500);
-        
-        // Poll for results
-        let result = null;
-        const maxAttempts = 30;  // Maximum polling attempts
-        const initialDelay = 2000;  // Start with 2 seconds
-        const maxDelay = 8000;  // Max delay between polls (8 seconds)
-        let currentDelay = initialDelay;
-        let attempts = 0;
-        
-        while (attempts < maxAttempts) {
-            attempts++;
-            
-            try {
-                // Update loading message to show progress after first attempt
-                if (attempts > 1) {
-                    const baseText = `解读中，请稍候 (${attempts}/${maxAttempts})`;
-                    loadingElement.textContent = baseText + dots[dotIndex];
-                }
-                
-                // Check job status
-                const response = await fetch(`${apiBaseUrl}/interpret?jobId=${jobId}`);
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || '检查解读任务状态失败');
-                }
-                
-                // Check job status
-                if (data.status === 'completed') {
-                    result = data.result;
-                    break;
-                } else if (data.status === 'failed') {
-                    throw new Error(data.error || '解读任务失败');
-                }
-                
-                // If still processing, wait and try again
-                await new Promise(resolve => setTimeout(resolve, currentDelay));
-                
-                // Increase delay time with each attempt (exponential backoff)
-                currentDelay = Math.min(currentDelay * 1.5, maxDelay);
-            } catch (error) {
-                clearInterval(updateDots);
-                throw error;
-            }
-        }
-        
-        clearInterval(updateDots);
-        
-        if (!result) {
-            throw new Error('解读超时，请稍后再试');
-        }
-        
-        // Format and display the result
-        aiResponse.innerHTML = formatTarotResponse(result);
-        console.log("AI 解读结果:", result);
-
         // After setting the response content, scroll the chat container
         setTimeout(() => {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }, 100);
-
+        
     } catch (error) {
         console.error('解读错误:', error);
         aiResponse.innerHTML = `解读失败: ${error.message || '服务器连接错误'}`;
