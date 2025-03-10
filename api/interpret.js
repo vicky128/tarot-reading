@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export default async function handler(req, res) {
     console.log("收到请求: ", req.method, req.body);
 
@@ -16,9 +18,9 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    const { question } = req.body;
-    if (!question) {
-        return res.status(400).json({ error: "缺少 question 参数" });
+    const { question, cards = [] } = req.body;
+    if (!question || !Array.isArray(cards) || cards.length === 0) {
+        return res.status(400).json({ error: "需要问题和至少一张塔罗牌" });
     }
 
     try {
@@ -44,16 +46,28 @@ export default async function handler(req, res) {
                 top_p: 0.7,
                 top_k: 50,
                 frequency_penalty: 0.5
-            },)
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.API_KEY}`
+                }
+            }
+        );
 
         // 解析 API 响应
-        const data = await response.json();
+        const data = response.data;
         console.log("真实 API 返回:", data);
 
         // 把真实 API 的返回结果转发给前端
-        return res.status(200).json(data);
+        return res.status(200).json({
+            result: data.choices[0].message.content
+        });
     } catch (error) {
         console.error("调用真实 API 失败:", error);
-        return res.status(500).json({ error: "服务器错误，无法访问真实 API" });
+        return res.status(500).json({ 
+            error: "服务器错误，无法访问真实 API",
+            details: error.message
+        });
     }
 }
