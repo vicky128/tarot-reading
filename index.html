@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔罗牌抽取</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+   
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <button id="startBtn" class="main-button">洗牌</button>
+    <div class="options" id="reverseContainer">
+        <input type="checkbox" id="reverseMode">
+        <label for="reverseMode">逆位</label>
+    </div>
+    <div class="card-container" id="cardContainer"></div>
+    <div id="drawnCardContainer" class="drawn-card-container"></div>
+    <div class="chat-container" id="chatContainer">
+        <input type="text" id="chatInput" class="chat-input" placeholder="请在心中默念自己想问的问题">
+        <button id="askBtn" class="ask-button">获取解读</button>
+        <div class="ai-response" id="aiResponse"></div>
+    </div>
+
+    <div id="limitMessage" class="limit-message">最多只能抽取6张牌</div>
+
+    <audio id="shuffle-sound" src="sounds/shuffle.mp3"></audio>
+    <audio id="flip-sound" src="sounds/flip.mp3"></audio>
+
+    <script src="tarot.js"></script>
+    <script src="./client.js"></script>
+</body>
+
+</html>
