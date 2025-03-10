@@ -72,21 +72,18 @@ async function processJob(jobId, question, cards) {
             status: "processing" 
         });
 
-        const response = await axios.post(
+        console.log(`任务 ${jobId} 开始调用 SiliconFlow API`);
+
+        // 不等待 API 直接返回，而是异步调用
+        axios.post(
             'https://api.siliconflow.cn/v1/chat/completions',
             {
                 model: "Qwen/QwQ-32B",
                 messages: [
-                    {
-                        role: "system",
-                        content: "你是一位专业的塔罗牌占卜师，请根据用户的问题和抽到的牌面进行综合解读。"
-                    },
-                    {
-                        role: "user",
-                        content: `我的问题：${question || "无特定问题"}\n\n抽到的牌：\n${cards.map(c =>
-                            `${c.name}（${c.reversed ? '逆位' : '正位'}） - ${c.description}`
-                        ).join('\n')}`
-                    }
+                    { role: "system", content: "你是一位专业的塔罗牌占卜师..." },
+                    { role: "user", content: `我的问题：${question || "无特定问题"}\n\n抽到的牌：\n${cards.map(c =>
+                        `${c.name}（${c.reversed ? '逆位' : '正位'}） - ${c.description}`
+                    ).join('\n')}`}
                 ],
                 stream: false,
                 max_tokens: 20000,
@@ -100,22 +97,32 @@ async function processJob(jobId, question, cards) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.API_KEY}`
                 },
-                timeout: 25000
+                timeout: 60000 // 60 秒超时
             }
-        );
+        ).then(response => {
+            if (!response.data.choices || !response.data.choices[0] || !response.data.choices[0].message.content) {
+                throw new Error("API 返回的内容为空");
+            }
 
-        if (!response.data.choices || !response.data.choices[0] || !response.data.choices[0].message.content) {
-            throw new Error("API 返回的内容为空");
-        }
+            const resultText = response.data.choices[0].message.content.trim();
+            console.log(`任务 ${jobId} 成功完成，返回结果:`, resultText);
 
-        const resultText = response.data.choices[0].message.content.trim();
-        console.log(`任务 ${jobId} 成功完成，返回结果:`, resultText);
+            jobStore.set(jobId, {
+                ...jobStore.get(jobId),
+                status: "completed",
+                result: resultText,
+                completed: new Date().toISOString()
+            });
 
-        jobStore.set(jobId, {
-            ...jobStore.get(jobId),
-            status: "completed",
-            result: resultText,  // 确保这里存储的是字符串
-            completed: new Date().toISOString()
+        }).catch(error => {
+            console.error(`任务 ${jobId} 失败:`, error.message);
+            
+            jobStore.set(jobId, {
+                ...jobStore.get(jobId),
+                status: "failed",
+                error: error.message || "未知错误",
+                completed: new Date().toISOString()
+            });
         });
 
     } catch (error) {

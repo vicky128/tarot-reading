@@ -259,7 +259,7 @@ async function getAIInterpretation() {
         
         console.log("塔罗牌解读请求:", requestData);
 
-        // 1️⃣ **发送 API 请求获取 jobId**
+        // 1️⃣ 发送 API 请求获取 jobId
         const response = await fetch("/api/interpret", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -274,10 +274,10 @@ async function getAIInterpretation() {
         console.log("收到 jobId:", responseData.jobId);
         const jobId = responseData.jobId;
 
-        // 2️⃣ **轮询 API 直到任务完成**
+        // 2️⃣ 轮询 API 直到任务完成
         let result;
         let retryCount = 0;
-        while (retryCount < 15) { // 最多轮询 30 秒（2 秒间隔）
+        while (retryCount < 30) { // 最多轮询 60 秒（2 秒间隔）
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             const jobResponse = await fetch(`/api/interpret?jobId=${jobId}`);
@@ -292,7 +292,6 @@ async function getAIInterpretation() {
                 }
 
                 aiResponse.innerHTML = `<pre>${result}</pre>`;
-                clearInterval(updateDots);
                 break;
             } else if (data.status === 'failed') {
                 throw new Error(`解读失败: ${data.error}`);
@@ -314,6 +313,7 @@ async function getAIInterpretation() {
         aiResponse.innerHTML = `解读失败: ${error.message || '服务器连接错误'}`;
     }
 }
+
 
 
 
