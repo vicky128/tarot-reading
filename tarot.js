@@ -244,13 +244,10 @@ function addDrawnCard(tarotCard, isReversed) {
     });
 }
 
-// In tarot.js, replace the getAIInterpretation function with this:
-// In tarot.js, update the getAIInterpretation function
 async function getAIInterpretation() {
     aiResponse.style.display = 'block';
     
     try {
-        // Prepare request data
         const requestData = {
             question: chatInput.value.trim() || "无特定问题",
             cards: drawnCards.map(card => ({
@@ -279,34 +276,35 @@ async function getAIInterpretation() {
 
         // 2️⃣ **轮询 API 直到任务完成**
         let result;
-        while (true) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 每 2 秒轮询一次
+        let retryCount = 0;
+        while (retryCount < 15) { // 最多轮询 30 秒（2 秒间隔）
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             const jobResponse = await fetch(`/api/interpret?jobId=${jobId}`);
             const data = await jobResponse.json();
 
             if (data.status === 'completed') {
                 result = data.result;
-                console.log("Raw AI response data:", result); // Log the raw data
+                console.log("Raw AI response data:", result);
 
                 if (!result || result.trim() === '') {
                     throw new Error('收到空的解读结果');
                 }
 
-                // 直接显示返回结果
                 aiResponse.innerHTML = `<pre>${result}</pre>`;
-
-                // 如果需要格式化，可以取消注释这行
-                // aiResponse.innerHTML = formatTarotResponse(result);
-
                 clearInterval(updateDots);
                 break;
             } else if (data.status === 'failed') {
                 throw new Error(`解读失败: ${data.error}`);
             }
+
+            retryCount++;
         }
 
-        // 3️⃣ **滚动到底部，显示最终结果**
+        if (!result) {
+            throw new Error("API 轮询超时，未能获取解读结果");
+        }
+
         setTimeout(() => {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }, 100);
@@ -316,6 +314,7 @@ async function getAIInterpretation() {
         aiResponse.innerHTML = `解读失败: ${error.message || '服务器连接错误'}`;
     }
 }
+
 
 
 // Helper function to format the response with nicer styling

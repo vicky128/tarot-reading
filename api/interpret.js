@@ -67,13 +67,11 @@ module.exports = async function handler(req, res) {
 
 async function processJob(jobId, question, cards) {
     try {
-        // Update job status
         jobStore.set(jobId, { 
             ...jobStore.get(jobId), 
             status: "processing" 
         });
 
-        // Make API call to SiliconFlow
         const response = await axios.post(
             'https://api.siliconflow.cn/v1/chat/completions',
             {
@@ -91,7 +89,7 @@ async function processJob(jobId, question, cards) {
                     }
                 ],
                 stream: false,
-                max_tokens: 200,
+                max_tokens: 20000,
                 temperature: 0.7,
                 top_p: 0.7,
                 top_k: 50,
@@ -102,36 +100,33 @@ async function processJob(jobId, question, cards) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.API_KEY}`
                 },
-                timeout: 25000 // 25 second timeout
+                timeout: 25000
             }
         );
 
-        // Store successful result
+        if (!response.data.choices || !response.data.choices[0] || !response.data.choices[0].message.content) {
+            throw new Error("API 返回的内容为空");
+        }
+
+        const resultText = response.data.choices[0].message.content.trim();
+        console.log(`任务 ${jobId} 成功完成，返回结果:`, resultText);
+
         jobStore.set(jobId, {
             ...jobStore.get(jobId),
             status: "completed",
-            result: response.data.choices[0].message.content,
+            result: resultText,  // 确保这里存储的是字符串
             completed: new Date().toISOString()
         });
 
-        console.log(`Job ${jobId} completed successfully`);
     } catch (error) {
-        console.error(`Error processing job ${jobId}:`, error.message);
+        console.error(`任务 ${jobId} 失败:`, error.message);
         
-        // Store error in job
         jobStore.set(jobId, {
             ...jobStore.get(jobId),
             status: "failed",
-            error: error.message || "Unknown error occurred",
+            error: error.message || "未知错误",
             completed: new Date().toISOString()
         });
     }
-
-    // Set expiration (clean up after 1 hour)
-    setTimeout(() => {
-        if (jobStore.has(jobId)) {
-            jobStore.delete(jobId);
-            console.log(`Job ${jobId} expired and removed from store`);
-        }
-    }, 60 * 60 * 1000);
 }
+
