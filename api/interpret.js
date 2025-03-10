@@ -1,8 +1,10 @@
-import axios from 'axios';
+const axios = require('axios');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     console.log("收到请求: ", req.method, req.body);
 
+    // Rest of your code remains the same
+    
     // 允许跨域
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -13,7 +15,7 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    // 只允许 POST 请求
+    // Only allow POST requests
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Method Not Allowed" });
     }
@@ -55,11 +57,11 @@ export default async function handler(req, res) {
             }
         );
 
-        // 解析 API 响应
+        // Parse API response
         const data = response.data;
         console.log("真实 API 返回:", data);
 
-        // 把真实 API 的返回结果转发给前端
+        // Forward the API response to the frontend
         return res.status(200).json({
             result: data.choices[0].message.content
         });
@@ -67,19 +69,7 @@ export default async function handler(req, res) {
         console.error("调用真实 API 失败:", error);
         return res.status(500).json({ 
             error: "服务器错误，无法访问真实 API",
-            details: error.message
+            details: error.message 
         });
     }
-} 
-try {
-    // Your existing code
-} catch (error) {
-    console.error("详细错误:", error);
-    console.error("错误堆栈:", error.stack);
-    console.error("错误响应:", error.response?.data);
-    return res.status(500).json({ 
-        error: "服务器错误，无法访问真实 API",
-        details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-}
+};
