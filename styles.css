@@ -223,7 +223,7 @@ body {
 }
 
 .ai-response {
-    width: 80%;
+    /* width: 80%; */
     height: auto; 
     overflow-y: auto; 
     background: rgba(0, 0, 0, 0.5);
