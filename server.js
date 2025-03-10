@@ -69,7 +69,7 @@ app.post('/api/interpret', async (req, res) => {
           }
         ],
         stream: false,
-        max_tokens: 20000,
+        max_tokens: 200,
         temperature: 0.7,
         top_p: 0.7,
         top_k: 50,
