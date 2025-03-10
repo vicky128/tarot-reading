@@ -10,7 +10,7 @@ async function getCardInterpretation(question, cards) {
   
       // Use environment-dependent URL instead of hardcoded one
       const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-        ? 'http://localhost:3000/api/interpret'
+        ? 'https://tarot-reading-tawny.vercel.app/api/interpret'
         : '/api/interpret'; // Will use relative path on production
       
       const response = await fetch(apiUrl, {
