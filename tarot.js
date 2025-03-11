@@ -10,6 +10,8 @@ const reverseMode = document.getElementById('reverseMode');
 const chatInput = document.getElementById('chatInput');
 const aiResponse = document.getElementById('aiResponse');
 const askBtn = document.getElementById('askBtn');
+const API_URL = process.env.API_URL;
+
 
 let tarotDeck = [];
 let drawnCards = [];
@@ -264,7 +266,7 @@ async function getAIInterpretation() {
         console.log("塔罗牌解读请求:", requestBody);
 
         // Make API request to backend server
-        const response = await fetch('http://localhost:3000/api/interpret', {
+        const response = await fetch('${API_URL}/api/interpret', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
