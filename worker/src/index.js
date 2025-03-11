@@ -113,7 +113,7 @@ async function handleInterpretation(request, env) {
     // Parse AI response
     const aiData = await aiResponse.json();
     const interpretationResult = aiData.choices[0].message.content;
-
+    console.log(`Token使用: ${JSON.stringify(aiResponse.data.usage)}`);
     // Return the interpretation result
     return new Response(
       JSON.stringify({ 
