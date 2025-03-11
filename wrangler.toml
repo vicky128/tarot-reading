@@ -1,6 +1,6 @@
 name = "tarot"
 type = "javascript"  
-account_id = "limeixu36@gmail.com"
+account_id = "27a85cdd957c8c26de19d775cf5c8c52"
 workers_dev = true
 
 # 关键：指定入口文件
