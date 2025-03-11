@@ -40,6 +40,10 @@ export default {
     if (url.pathname === '/interpret' && request.method === 'POST') {
       return handleInterpretation(request, env);
     }
+    if (url.pathname === "/logs") {
+      return handleLogs(request, env);
+    }
+    
 
     // Handle unknown endpoints
     return new Response('Not Found', {
@@ -94,6 +98,16 @@ async function handleInterpretation(request, env) {
     }
 
     const aiData = await aiResponse.json();
+    if (aiData.usage) {
+      console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
+
+      // 存入 Cloudflare KV
+      await logUsageToKV(env, {
+        time: new Date().toISOString(),
+        usage: aiData.usage,
+        rawResponse: aiData
+      });
+    }
 
     // 直接返回日志数据到 API 响应
     return new Response(JSON.stringify({
@@ -107,6 +121,8 @@ async function handleInterpretation(request, env) {
       headers: { 'Content-Type': 'application/json' }
     });
 
+
+
   } catch (error) {
     return new Response(JSON.stringify({
       error: '解读服务暂时不可用',
@@ -115,4 +131,21 @@ async function handleInterpretation(request, env) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+}
+async function logUsageToKV(env, usageData) {
+  const logKey = `log-${Date.now()}`; // 以时间戳作为 key
+  await env.TOKEN_LOGS.put(logKey, JSON.stringify(usageData));
+}
+async function handleLogs(request, env) {
+  const logs = [];
+  const list = await env.TOKEN_LOGS.list(); // 获取 KV 里的所有 keys
+
+  for (const key of list.keys) {
+    const logData = await env.TOKEN_LOGS.get(key.name);
+    logs.push(JSON.parse(logData));
+  }
+
+  return new Response(JSON.stringify(logs, null, 2), {
+    headers: { "Content-Type": "application/json" },
+  });
 }
