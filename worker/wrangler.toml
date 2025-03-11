@@ -16,8 +16,8 @@ compatibility_date = "2023-10-30"
 
 # Development environment
 [env.dev]
-name = "tarot-interpreter-dev"
-main = "src/index.js"
+name = "tarot-interpreter"
+main = "index.js"
 [[kv_namespaces]]
 binding = "TOKEN_LOGS"
 id = "b0deabe9d58344c5a1b3f2acfd6e0e8c"
