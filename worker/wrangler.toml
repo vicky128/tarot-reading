@@ -1,4 +1,6 @@
 name = "tarot-interpreter"
+type = "javascript"
+account_id = "27a85cdd957c8c26de19d775cf5c8c52"
 main = "src/index.js"
 compatibility_date = "2023-10-30"
 

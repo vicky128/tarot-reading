@@ -113,9 +113,15 @@ async function handleInterpretation(request, env) {
     // Parse AI response
     const aiData = await aiResponse.json();
     const interpretationResult = aiData.choices[0].message.content;
+    // 先打印整个 API 响应，确认数据结构
+    console.log("AI API 响应:", JSON.stringify(aiData, null, 2));
 
-    // 记录 Token 使用情况
-    console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
+    // 再打印 Token 使用情况
+    if (aiData.usage) {
+      console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
+    } else {
+      console.log("⚠️ AI API 没有返回 usage 字段");
+    }
     if (aiData.usage) {
       console.log('=== Token 使用详情 ===');
       console.log(`模型: ${aiData.model}`);
