@@ -1,6 +1,6 @@
 # worker/wrangler.toml
 name = "tarot-interpreter"
-main = "./src/index.js"  # 明确入口文件路径
+main = "src/index.js"  # 明确入口文件路径
 compatibility_date = "2024-01-01"
 node_compat = true       # 启用 Node.js 兼容模式
 account_id = "27a85cdd957c8c26de19d775cf5c8c52"  # 你的账号 ID
