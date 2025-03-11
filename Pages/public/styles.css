@@ -1,0 +1,606 @@
+body {
+    background: #2c2c2c;
+    color: white;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    overflow-x: hidden;
+}
+
+.main-button {
+    font-size: 28px;
+    width: 100px;
+    height: 100px;
+    border: none;
+    background: linear-gradient(145deg, #ff0000, #cc0000);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s;
+    box-shadow: 0px 4px 10px rgba(255, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+
+.main-button:active {
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+.options {
+    position: fixed;
+    left: calc(50% + 60px);
+    top: calc(50% - 10px);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 1000;
+}
+
+.card-container {
+    display: none;
+    position: relative;
+    width: 90%;
+    max-width: 1200px;
+    height: 450px;
+    margin-top: -100px;
+}
+
+.card {
+    position: absolute;
+    width: 100px;
+    height: 160px;
+    background: url('images/card-back.jpg') no-repeat center/cover;
+    border-radius: 10px;
+    transform-origin: center bottom;
+    cursor: pointer;
+    opacity: 0;
+    transition: transform 0.3s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.card:hover {
+    transform-origin: center bottom;
+    transition: transform 0.2s ease-out;
+    filter: brightness(1.2);
+}
+
+.drawn-card-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    width: 100%;
+    position: relative;
+    margin-top: -40px;
+    z-index: 1001;
+    padding: 0 10px;
+    box-sizing: border-box;
+}
+
+.drawn-card-wrapper {
+    text-align: center;
+    position: relative;
+    animation: cardAppear 0.5s ease-out forwards;
+}
+
+@keyframes cardAppear {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.drawn-card {
+    width: 120px;
+    height: 192px;
+    background: url('images/card-back.jpg') no-repeat center/cover;
+    border-radius: 10px;
+    transition: transform 0.5s ease-in-out;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+.drawn-card.reversed {
+    transform: rotate(180deg);
+}
+
+.drawn-card:hover {
+    filter: brightness(1.2);
+    transform: translateY(-5px);
+}
+
+.drawn-card.reversed:hover {
+    filter: brightness(1.2);
+    transform: translateY(-5px) rotate(180deg);
+}
+
+.card-name {
+    margin-top: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+.tooltip {
+    position: absolute;
+    background: rgba(118, 112, 112, 0.9);
+    color: white;
+    padding: 8px;
+    border-radius: 6px;
+    display: none;
+    min-width: 140px;
+    max-width: 500px;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: normal;
+    font-size: 13px;
+    line-height: 1.4;
+    z-index: 1500;
+    box-sizing: border-box;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.chat-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 1000px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 10px;
+    opacity: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.chat-input {
+    width: 85%;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    color: #ccc;
+    background: #444;
+}
+
+.ask-button {
+    padding: 8px 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.ai-response {
+    height: auto; 
+    overflow-y: auto; 
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-top: 10px;
+    /* word-wrap: break-word; */
+    /* Ensure text wraps */
+    max-height: none;
+    /* Remove any height restriction */
+    overflow: visible;
+    white-space: pre-wrap;
+    display: none;
+}
+
+.chat-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.loading-dots {
+    display: inline-block;
+}
+
+.loading-dots::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+    0%, 20% {
+        content: '.';
+    }
+    40% {
+        content: '..';
+    }
+    60%, 100% {
+        content: '...';
+    }
+}
+
+.limit-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 0, 0, 0.8);
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    display: none;
+    z-index: 2000;
+}
+
+@keyframes drawFromDeck {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-20%, 20%) rotate(10deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-300%, 100%) rotate(0deg);
+        opacity: 0;
+    }
+}
+
+@keyframes flipCard {
+    0% {
+        transform: rotateY(0deg);
+    }
+    49% {
+        transform: rotateY(90deg);
+    }
+    51% {
+        transform: rotateY(270deg);
+    }
+    100% {
+        transform: rotateY(360deg);
+    }
+}
+
+/* Tablet Styles (iPad) */
+@media only screen and (max-width: 1024px) {
+    .card-container {
+        height: 350px;
+        margin-top: -50px;
+    }
+    
+    .main-button {
+        width: 80px;
+        height: 80px;
+        font-size: 22px;
+    }
+    
+    .options {
+        left: calc(50% + 45px);
+        font-size: 14px;
+    }
+    
+    .drawn-card {
+        width: 100px;
+        height: 160px;
+    }
+    
+    .card-name {
+        font-size: 14px;
+    }
+    
+    .chat-container {
+        max-height: 400px;
+        bottom: 10px;
+    }
+    
+    .tooltip {
+        max-width: 300px;
+        font-size: 12px;
+    }
+}
+
+/* Mobile Styles */
+@media only screen and (max-width: 767px) {
+    .card-container {
+        height: 250px;
+        margin-top: -30px;
+    }
+    
+    .main-button {
+        width: 60px;
+        height: 60px;
+        font-size: 18px;
+    }
+    
+    .options {
+        left: calc(50% + 35px);
+        font-size: 12px;
+    }
+    
+    .drawn-card-container {
+        gap: 10px;
+        margin-top: -20px;
+    }
+    
+    .drawn-card {
+        width: 80px;
+        height: 128px;
+    }
+    
+    .card-name {
+        font-size: 12px;
+    }
+    
+    .card {
+        width: 70px;
+        height: 112px;
+    }
+    
+    .chat-container {
+        max-height: 300px;
+        padding: 10px;
+        bottom: 5px;
+    }
+    
+    .ai-response {
+        padding: 10px;
+        font-size: 12px;
+    }
+    
+    .chat-input {
+        font-size: 14px;
+        padding: 8px;
+    }
+    
+    .ask-button {
+        padding: 6px 15px;
+        font-size: 12px;
+    }
+    
+    .tooltip {
+        max-width: 200px;
+        font-size: 11px;
+        padding: 6px;
+    }
+}
+
+/* Small Mobile Devices */
+@media only screen and (max-width: 479px) {
+    .card-container {
+        height: 200px;
+        margin-top: -20px;
+    }
+    
+    .main-button {
+        width: 50px;
+        height: 50px;
+        font-size: 16px;
+    }
+    
+    .options {
+        left: calc(50% + 30px);
+        font-size: 10px;
+    }
+    
+    .drawn-card-container {
+        gap: 8px;
+        margin-top: -15px;
+    }
+    
+    .drawn-card {
+        width: 60px;
+        height: 96px;
+    }
+    
+    .card-name {
+        font-size: 10px;
+    }
+    
+    .card {
+        width: 50px;
+        height: 80px;
+    }
+    
+    .chat-container {
+        max-height: 250px;
+        padding: 8px;
+    }
+    
+    .ai-response {
+        padding: 8px;
+        font-size: 11px;
+    }
+    
+    .chat-input {
+        font-size: 12px;
+        padding: 6px;
+    }
+    
+    .ask-button {
+        padding: 5px 12px;
+        font-size: 11px;
+    }
+    
+    .tooltip {
+        max-width: 150px;
+        font-size: 10px;
+        padding: 5px;
+    }
+}
+/* 添加视口元标签到HTML的<head>中 */
+/* <meta name="viewport" content="width=device-width, initial-scale=1.0"> */
+
+/* 响应式设计 - 移动优先 */
+@media (max-width: 768px) {
+    body {
+        padding-top: 10px;
+        overflow: auto; /* 允许滚动 */
+        min-height: -webkit-fill-available; /* 解决移动浏览器工具栏问题 */
+    }
+
+    .main-button {
+        width: 70px;
+        height: 70px;
+        font-size: 20px;
+        top: 40% !important; /* 调整按钮位置 */
+    }
+
+    .card-container {
+        width: 100%;
+        height: auto;
+        margin-top: 20px;
+        padding: 0 10px;
+    }
+
+    .card {
+        width: 60px;
+        height: 96px;
+    }
+
+    .drawn-card-container {
+        bottom: 400px; /* 调整位置适应聊天框 */
+        gap: 10px;
+        padding: 0 10px;
+    }
+
+    .drawn-card {
+        width: 80px;
+        height: 128px;
+    }
+
+    .card-name {
+        font-size: 12px;
+    }
+
+    .chat-container {
+        top: auto;
+        bottom: 20px;
+        width: 95%;
+        max-height: 30vh;
+    }
+
+    .chat-input {
+        width: 75%;
+        font-size: 14px;
+    }
+
+    /* 调整工具提示位置 */
+    .tooltip {
+        max-width: 90vw;
+        bottom: -50px;
+        font-size: 12px;
+    }
+
+    /* 卡片动画调整 */
+    @keyframes drawFromDeck {
+        100% {
+            transform: translate(-200%, 80%);
+        }
+    }
+}
+
+/* 平板设备适配 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .card-container {
+        width: 90%;
+    }
+
+    .drawn-card {
+        width: 100px;
+        height: 160px;
+    }
+
+    .chat-container {
+        max-width: 90%;
+    }
+}
+
+/* 通用响应式调整 */
+.drawn-card-container {
+    position: relative;
+    bottom: auto;
+    margin-top: 20px;
+    padding-bottom: 120px; /* 为聊天框留出空间 */
+}
+
+.chat-container {
+    position: fixed;
+    top: auto !important;
+    bottom: 20px;
+    transform: translateX(-50%);
+}
+
+/* 弹性布局调整 */
+body {
+    flex-wrap: nowrap;
+}
+
+/* 移动设备横屏适配 */
+@media (max-height: 500px) and (orientation: landscape) {
+    .main-button {
+        top: 30% !important;
+    }
+
+    .drawn-card-container {
+        bottom: 300px;
+    }
+
+    .chat-container {
+        max-height: 25vh;
+    }
+}
+
+/* 防止卡片过小 */
+@media (max-width: 480px) {
+    .card {
+        width: 50px;
+        height: 80px;
+    }
+
+    .drawn-card {
+        width: 60px;
+        height: 96px;
+    }
+}
+
+/* 优化触摸交互 */
+button, .card, .drawn-card {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+/* Add viewport meta tag to your HTML file if you haven't already */
+/* <meta name="viewport" content="width=device-width, initial-scale=1.0"> */
