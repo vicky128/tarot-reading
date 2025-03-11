@@ -35,14 +35,14 @@ export default {
 
     // Get request URL
     const url = new URL(request.url);
-    
+
     // Handle tarot card interpretation endpoint
     if (url.pathname === '/interpret' && request.method === 'POST') {
       return handleInterpretation(request, env);
     }
 
     // Handle unknown endpoints
-    return new Response('Not Found', { 
+    return new Response('Not Found', {
       status: 404,
       headers: corsHeaders
     });
@@ -55,17 +55,17 @@ async function handleInterpretation(request, env) {
     // Parse request body
     const requestData = await request.json();
     const { question = "", cards = [] } = requestData;
-    
+
     // Validate request data
     if (!Array.isArray(cards) || cards.length === 0) {
       return new Response(
         JSON.stringify({ error: '需要至少一张塔罗牌' }),
-        { 
-          status: 400, 
-          headers: { 
+        {
+          status: 400,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -113,34 +113,45 @@ async function handleInterpretation(request, env) {
     // Parse AI response
     const aiData = await aiResponse.json();
     const interpretationResult = aiData.choices[0].message.content;
-    console.log(`Token使用: ${JSON.stringify(aiResponse.data.usage)}`);
+
+    // 记录 Token 使用情况
+    console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
+    if (aiData.usage) {
+      console.log('=== Token 使用详情 ===');
+      console.log(`模型: ${aiData.model}`);
+      console.log(`总 Token 数: ${aiData.usage.total_tokens}`);
+      console.log(`请求 Token: ${aiData.usage.prompt_tokens}`);
+      console.log(`响应 Token: ${aiData.usage.completion_tokens}`);
+      console.log('======================');
+    }
+
     // Return the interpretation result
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         result: interpretationResult,
         usage: aiData.usage
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   } catch (error) {
     // Handle errors
     console.error('Worker error:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: '解读服务暂时不可用',
         details: error.message
       }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
