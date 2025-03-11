@@ -1,9 +1,0 @@
-name = "tarot"
-type = "javascript"  
-account_id = "27a85cdd957c8c26de19d775cf5c8c52"
-workers_dev = true
-
-# 关键：指定入口文件
-main = "tarot.js"  # 如果你的入口文件是 index.js
-
-compatibility_date = "2024-03-10"  # Cloudflare 兼容日期
