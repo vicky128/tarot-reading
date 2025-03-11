@@ -1,25 +1,16 @@
 # worker/wrangler.toml
 name = "tarot-interpreter"
-main = "src/index.js"  # 明确入口文件路径
+main = "src/index.js"  
 compatibility_date = "2024-01-01"
-node_compat = true       # 启用 Node.js 兼容模式
-account_id = "27a85cdd957c8c26de19d775cf5c8c52"  # 你的账号 ID
+node_compat = true       
+account_id = "27a85cdd957c8c26de19d775cf5c8c52" 
 
-# 构建配置（无构建步骤）
-[build]
-command = ""
-upload.format = "service-worker"  # 明确 Worker 类型
 
-# 环境变量配置
-[vars]
-API_BASE_URL = "https://api.example.com"
 
-# KV 存储绑定（根据实际需要配置）
 [[kv_namespaces]]
 binding = "TOKEN_LOGS"
 id = "b0deabe9d58344c5a1b3f2acfd6e0e8c"
-preview_id = "b0deabe9d58344c5a1b3f2acfd6e0e8c"  # 开发环境 ID（与生产环境相同）
 
-# 开发环境配置
+
 [env.dev]
 name = "tarot-interpreter-dev"
