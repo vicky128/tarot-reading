@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker for tarot card interpretation
- * Handles API requests and forwards them to the AI service
+ * With fixed CORS implementation
  */
 
 // Define your API key as a secret in Cloudflare Workers
@@ -12,7 +12,7 @@ const AI_API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
 
 // CORS headers for all responses
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://tarot-reading.pages.dev',  // Updated to match your exact origin
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
@@ -40,15 +40,11 @@ export default {
     if (url.pathname === '/interpret' && request.method === 'POST') {
       return handleInterpretation(request, env);
     }
-    if (url.pathname === "/logs") {
-      return handleLogs(request, env);
-    }
-    
 
     // Handle unknown endpoints
     return new Response('Not Found', {
       status: 404,
-      headers: corsHeaders
+      headers: corsHeaders  // Make sure to include CORS headers in all responses
     });
   }
 };
@@ -56,9 +52,25 @@ export default {
 // Handle tarot card interpretation requests
 async function handleInterpretation(request, env) {
   try {
+    // Parse request body
     const requestData = await request.json();
     const { question = "", cards = [] } = requestData;
 
+    // Validate request data
+    if (!Array.isArray(cards) || cards.length === 0) {
+      return new Response(
+        JSON.stringify({ error: '需要至少一张塔罗牌' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders  // Include CORS headers
+          }
+        }
+      );
+    }
+
+    // Prepare the API request
     const aiRequest = {
       model: "Qwen/QwQ-32B",
       messages: [
@@ -81,6 +93,7 @@ async function handleInterpretation(request, env) {
       frequency_penalty: 0.5
     };
 
+    // Make request to AI API
     const aiResponse = await fetch(AI_API_URL, {
       method: 'POST',
       headers: {
@@ -90,62 +103,60 @@ async function handleInterpretation(request, env) {
       body: JSON.stringify(aiRequest)
     });
 
+    // Check if API response is ok
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      return new Response(JSON.stringify({ error: `API Error: ${aiResponse.status} ${errorText}` }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.error('API Error:', aiResponse.status, errorText);
+      throw new Error(`API Error: ${aiResponse.status} ${errorText}`);
     }
 
+    // Parse AI response
     const aiData = await aiResponse.json();
+    const interpretationResult = aiData.choices[0].message.content;
+    
+    // Log token usage to console
+    console.log("AI API 响应:", JSON.stringify(aiData, null, 2));
+    
     if (aiData.usage) {
       console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
-
-      // 存入 Cloudflare KV
-      await logUsageToKV(env, {
-        time: new Date().toISOString(),
-        usage: aiData.usage,
-        rawResponse: aiData
-      });
+      console.log('=== Token 使用详情 ===');
+      console.log(`模型: ${aiData.model}`);
+      console.log(`总 Token 数: ${aiData.usage.total_tokens}`);
+      console.log(`请求 Token: ${aiData.usage.prompt_tokens}`);
+      console.log(`响应 Token: ${aiData.usage.completion_tokens}`);
+      console.log('======================');
+    } else {
+      console.log("⚠️ AI API 没有返回 usage 字段");
     }
 
-    // 直接返回日志数据到 API 响应
-    return new Response(JSON.stringify({
-      result: aiData.choices[0].message.content,
-      usage: aiData.usage || "未返回 usage",
-      debug: {
-        rawResponse: aiData,  // 输出完整的 API 响应，方便调试
-        requestData: aiRequest // 输出请求的内容
+    // Return the interpretation result with CORS headers
+    return new Response(
+      JSON.stringify({
+        result: interpretationResult,
+        usage: aiData.usage
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders  // Include CORS headers
+        }
       }
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-
-
+    );
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: '解读服务暂时不可用',
-      details: error.message
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // Handle errors
+    console.error('Worker error:', error);
+    return new Response(
+      JSON.stringify({
+        error: '解读服务暂时不可用',
+        details: error.message
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders  // Include CORS headers
+        }
+      }
+    );
   }
-}
-async function logUsageToKV(env, usageData) {
-  const logKey = `log-${Date.now()}`; // 以时间戳作为 key
-  await env.TOKEN_LOGS.put(logKey, JSON.stringify(usageData));
-}
-async function handleLogs(request, env) {
-  const logs = [];
-  const list = await env.TOKEN_LOGS.list(); // 获取 KV 里的所有 keys
-
-  for (const key of list.keys) {
-    const logData = await env.TOKEN_LOGS.get(key.name);
-    logs.push(JSON.parse(logData));
-  }
-
-  return new Response(JSON.stringify(logs, null, 2), {
-    headers: { "Content-Type": "application/json" },
-  });
 }
