@@ -161,6 +161,7 @@ body {
 
 .chat-container {
     position: fixed;
+    top: 620px;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
