@@ -1,6 +1,6 @@
 # worker/wrangler.toml
 name = "tarot-interpreter"
-main = "src/index.js"  
+main = "./src/index.js"  
 compatibility_date = "2024-01-01"
 node_compat = true       
 account_id = "27a85cdd957c8c26de19d775cf5c8c52" 
