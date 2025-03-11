@@ -214,7 +214,7 @@ body {
     /* Remove any height restriction */
     overflow: visible;
     white-space: pre-wrap;
-    display: none;
+    /* display: none; */
 }
 
 .chat-container::-webkit-scrollbar {

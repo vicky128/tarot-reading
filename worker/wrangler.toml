@@ -1,0 +1,17 @@
+name = "tarot-interpreter"
+main = "src/index.js"
+compatibility_date = "2023-10-30"
+
+# Specify environment variables
+[vars]
+# You can put non-secret environment variables here
+# For secrets, use: wrangler secret put API_KEY
+
+# Route configuration
+# [routes]
+# pattern = "your-domain.com/api/*"
+# zone_id = "your-zone-id" # Add this if using a custom domain
+
+# Development environment
+[env.dev]
+name = "tarot-interpreter-dev"
