@@ -1,9 +1,19 @@
+/**
+ * Cloudflare Worker for tarot card interpretation
+ * Handles API requests and forwards them to the AI service
+ * Now includes D1 database logging for token usage
+ */
+
+// Define your API key as a secret in Cloudflare Workers
+// You'll need to set this in the Cloudflare Dashboard or with Wrangler CLI
+// wrangler secret put API_KEY
+
 // The AI API URL
 const AI_API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
 
 // CORS headers for all responses
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://tarot-reading.pages.dev',  // Updated to match your exact origin
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
@@ -16,52 +26,37 @@ function handleOptions(request) {
   });
 }
 
+// Main fetch event handler
 export default {
   async fetch(request, env, ctx) {
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      return handleOptions(request);
+    }
+
+    // Get request URL
     const url = new URL(request.url);
 
-    // 1️⃣ 处理根路径 `/`
-    if (url.pathname === "/") {
-      return new Response("Hello! Your Worker is running 🚀", {
-        headers: { "Content-Type": "text/plain" },
-      });
+    // Handle tarot card interpretation endpoint
+    if (url.pathname === '/interpret' && request.method === 'POST') {
+      return handleInterpretation(request, env, ctx);
+    }
+    
+    // Add an endpoint for viewing token usage stats
+    if (url.pathname === '/token-stats' && request.method === 'GET') {
+      return handleTokenStats(request, env);
     }
 
-    // 2️⃣ 处理 `/interpret` API 请求
-    if (url.pathname === "/interpret" && request.method === "POST") {
-      return handleInterpretation(request, env);
-    }
-
-    // 3️⃣ 处理 `/logs` API 请求（查看 KV 存储的 Token 记录）
-    if (url.pathname === "/logs") {
-      return handleLogs(request, env);
-    }
-
-    // 4️⃣ 处理其他未匹配的路径，返回 404
-    return new Response("Not Found", { status: 404 });
-  },
+    // Handle unknown endpoints
+    return new Response('Not Found', {
+      status: 404,
+      headers: corsHeaders
+    });
+  }
 };
 
-// Save token usage to KV
-async function saveTokenUsage(env, data) {
-  try {
-    // Create a unique key using timestamp
-    const timestamp = new Date().toISOString();
-    const key = `token_usage_${timestamp}`;
-    
-    // Save the data to KV
-    await env.TOKEN_USAGE.put(key, JSON.stringify(data));
-    
-    console.log(`Token usage saved to KV with key: ${key}`);
-    return true;
-  } catch (error) {
-    console.error('Error saving to KV:', error);
-    return false;
-  }
-}
-
 // Handle tarot card interpretation requests
-async function handleInterpretation(request, env) {
+async function handleInterpretation(request, env, ctx) {
   try {
     // Parse request body
     const requestData = await request.json();
@@ -75,12 +70,15 @@ async function handleInterpretation(request, env) {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            ...corsHeaders  // Include CORS headers
+            ...corsHeaders
           }
         }
       );
     }
 
+    // Record request timestamp
+    const requestTime = new Date().toISOString();
+    
     // Prepare the API request
     const aiRequest = {
       model: "Qwen/QwQ-32B",
@@ -128,21 +126,7 @@ async function handleInterpretation(request, env) {
     // Log token usage to console
     console.log("AI API 响应:", JSON.stringify(aiData, null, 2));
     
-    // Save token usage data to KV
     if (aiData.usage) {
-      const usageData = {
-        timestamp: new Date().toISOString(),
-        model: aiData.model || "Qwen/QwQ-32B",
-        question: question || "无特定问题",
-        cards_count: cards.length,
-        total_tokens: aiData.usage.total_tokens,
-        prompt_tokens: aiData.usage.prompt_tokens,
-        completion_tokens: aiData.usage.completion_tokens
-      };
-      
-      // Save to KV in the background
-      ctx.waitUntil(saveTokenUsage(env, usageData));
-      
       console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
       console.log('=== Token 使用详情 ===');
       console.log(`模型: ${aiData.model}`);
@@ -150,11 +134,24 @@ async function handleInterpretation(request, env) {
       console.log(`请求 Token: ${aiData.usage.prompt_tokens}`);
       console.log(`响应 Token: ${aiData.usage.completion_tokens}`);
       console.log('======================');
+      
+      // Store token usage data in D1 database
+      // This uses ctx.waitUntil to ensure the database operation completes
+      // even if the response is already sent back to the client
+      ctx.waitUntil(logTokenUsageToD1(env, {
+        timestamp: requestTime,
+        model: aiData.model || "Qwen/QwQ-32B",
+        question_type: question ? "specific" : "general",
+        cards_count: cards.length,
+        prompt_tokens: aiData.usage.prompt_tokens,
+        completion_tokens: aiData.usage.completion_tokens,
+        total_tokens: aiData.usage.total_tokens
+      }));
     } else {
       console.log("⚠️ AI API 没有返回 usage 字段");
     }
 
-    // Return the interpretation result with CORS headers
+    // Return the interpretation result
     return new Response(
       JSON.stringify({
         result: interpretationResult,
@@ -163,7 +160,7 @@ async function handleInterpretation(request, env) {
       {
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders  // Include CORS headers
+          ...corsHeaders
         }
       }
     );
@@ -179,7 +176,116 @@ async function handleInterpretation(request, env) {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders  // Include CORS headers
+          ...corsHeaders
+        }
+      }
+    );
+  }
+}
+
+// Function to log token usage to D1 database
+async function logTokenUsageToD1(env, usageData) {
+  try {
+    // Insert token usage data into the D1 database
+    await env.DB.prepare(
+      `INSERT INTO token_usage (
+        timestamp, model, question_type, cards_count, 
+        prompt_tokens, completion_tokens, total_tokens
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      usageData.timestamp,
+      usageData.model,
+      usageData.question_type,
+      usageData.cards_count,
+      usageData.prompt_tokens,
+      usageData.completion_tokens,
+      usageData.total_tokens
+    ).run();
+    
+    console.log("Token usage data successfully logged to D1 database");
+  } catch (error) {
+    console.error("Error logging to D1 database:", error);
+  }
+}
+
+// Handle token stats requests
+async function handleTokenStats(request, env) {
+  try {
+    // Query parameters
+    const url = new URL(request.url);
+    const period = url.searchParams.get('period') || 'day'; // day, week, month
+    
+    let timeFilter;
+    const now = new Date();
+    
+    // Set time filter based on period
+    if (period === 'day') {
+      // Last 24 hours
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+      timeFilter = `timestamp >= '${oneDayAgo}'`;
+    } else if (period === 'week') {
+      // Last 7 days
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      timeFilter = `timestamp >= '${oneWeekAgo}'`;
+    } else if (period === 'month') {
+      // Last 30 days
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      timeFilter = `timestamp >= '${oneMonthAgo}'`;
+    } else {
+      // All time
+      timeFilter = "1=1";
+    }
+    
+    // Get total usage stats
+    const totalStats = await env.DB.prepare(
+      `SELECT 
+        COUNT(*) as request_count,
+        SUM(prompt_tokens) as total_prompt_tokens,
+        SUM(completion_tokens) as total_completion_tokens,
+        SUM(total_tokens) as total_tokens
+      FROM token_usage
+      WHERE ${timeFilter}`
+    ).all();
+    
+    // Get daily usage stats
+    const dailyStats = await env.DB.prepare(
+      `SELECT 
+        date(timestamp) as date,
+        COUNT(*) as request_count,
+        SUM(prompt_tokens) as prompt_tokens,
+        SUM(completion_tokens) as completion_tokens,
+        SUM(total_tokens) as total_tokens
+      FROM token_usage
+      WHERE ${timeFilter}
+      GROUP BY date(timestamp)
+      ORDER BY date(timestamp) DESC`
+    ).all();
+    
+    return new Response(
+      JSON.stringify({
+        period: period,
+        total: totalStats.results[0],
+        daily: dailyStats.results
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error fetching token stats:', error);
+    return new Response(
+      JSON.stringify({
+        error: '无法获取统计数据',
+        details: error.message
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
         }
       }
     );
