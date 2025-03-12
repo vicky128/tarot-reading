@@ -208,13 +208,14 @@ body {
     font-size: 14px;
     line-height: 1.6;
     margin-top: 10px;
-    word-wrap: break-word; /* Uncomment this */
+    word-wrap: break-word; /* 允许长单词换行 */
+    overflow-wrap: break-word; /* 兼容性更好的换行方式 */
     max-height: none;
-    overflow: visible;
-    white-space: pre-wrap;
-    width: 100%; /* Add this to ensure it uses the full width */
-    box-sizing: border-box; /* Add this to include padding in width calculation */
-    overflow-x: hidden; /* Add this to hide horizontal scrollbar */
+    overflow: hidden; /* 隐藏滚动条，防止出现横向滚动 */
+    white-space: normal; /* 让文本正常换行 */
+    width: 100%; /* 确保占满容器宽度 */
+    box-sizing: border-box;
+    
 }
 .chat-container::-webkit-scrollbar {
     width: 8px;
