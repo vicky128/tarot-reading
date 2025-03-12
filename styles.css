@@ -213,7 +213,7 @@ body {
     max-height: none;
     overflow: hidden; /* 隐藏滚动条，防止出现横向滚动 */
     white-space: normal; /* 让文本正常换行 */
-    width: 100%; /* 确保占满容器宽度 */
+    width: 100%; 
     box-sizing: border-box;
     
 }
