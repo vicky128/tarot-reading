@@ -14,3 +14,8 @@ id = "b0deabe9d58344c5a1b3f2acfd6e0e8c"
 
 [env.dev]
 name = "tarot-interpreter-dev"
+
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true
+
