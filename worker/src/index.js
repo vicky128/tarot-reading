@@ -16,29 +16,49 @@ function handleOptions(request) {
   });
 }
 
-// Main fetch event handler
 export default {
   async fetch(request, env, ctx) {
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      return handleOptions(request);
-    }
-
-    // Get request URL
     const url = new URL(request.url);
 
-    // Handle tarot card interpretation endpoint
-    if (url.pathname === '/interpret' && request.method === 'POST') {
+    // 1️⃣ 处理根路径 `/`
+    if (url.pathname === "/") {
+      return new Response("Hello! Your Worker is running 🚀", {
+        headers: { "Content-Type": "text/plain" },
+      });
+    }
+
+    // 2️⃣ 处理 `/interpret` API 请求
+    if (url.pathname === "/interpret" && request.method === "POST") {
       return handleInterpretation(request, env);
     }
 
-    // Handle unknown endpoints
-    return new Response('Not Found', {
-      status: 404,
-      headers: corsHeaders  // Make sure to include CORS headers in all responses
-    });
-  }
+    // 3️⃣ 处理 `/logs` API 请求（查看 KV 存储的 Token 记录）
+    if (url.pathname === "/logs") {
+      return handleLogs(request, env);
+    }
+
+    // 4️⃣ 处理其他未匹配的路径，返回 404
+    return new Response("Not Found", { status: 404 });
+  },
 };
+
+// Save token usage to KV
+async function saveTokenUsage(env, data) {
+  try {
+    // Create a unique key using timestamp
+    const timestamp = new Date().toISOString();
+    const key = `token_usage_${timestamp}`;
+    
+    // Save the data to KV
+    await env.TOKEN_USAGE.put(key, JSON.stringify(data));
+    
+    console.log(`Token usage saved to KV with key: ${key}`);
+    return true;
+  } catch (error) {
+    console.error('Error saving to KV:', error);
+    return false;
+  }
+}
 
 // Handle tarot card interpretation requests
 async function handleInterpretation(request, env) {
@@ -108,7 +128,21 @@ async function handleInterpretation(request, env) {
     // Log token usage to console
     console.log("AI API 响应:", JSON.stringify(aiData, null, 2));
     
+    // Save token usage data to KV
     if (aiData.usage) {
+      const usageData = {
+        timestamp: new Date().toISOString(),
+        model: aiData.model || "Qwen/QwQ-32B",
+        question: question || "无特定问题",
+        cards_count: cards.length,
+        total_tokens: aiData.usage.total_tokens,
+        prompt_tokens: aiData.usage.prompt_tokens,
+        completion_tokens: aiData.usage.completion_tokens
+      };
+      
+      // Save to KV in the background
+      ctx.waitUntil(saveTokenUsage(env, usageData));
+      
       console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
       console.log('=== Token 使用详情 ===');
       console.log(`模型: ${aiData.model}`);
