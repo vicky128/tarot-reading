@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker for tarot card interpretation
  * Handles API requests and forwards them to the AI service
- * Now includes D1 database logging for token usage
+ * Now includes KV logging for token usage
  */
 
 // Define your API key as a secret in Cloudflare Workers
@@ -135,10 +135,10 @@ async function handleInterpretation(request, env, ctx) {
       console.log(`响应 Token: ${aiData.usage.completion_tokens}`);
       console.log('======================');
       
-      // Store token usage data in D1 database
-      // This uses ctx.waitUntil to ensure the database operation completes
+      // Store token usage data in KV
+      // This uses ctx.waitUntil to ensure the KV operation completes
       // even if the response is already sent back to the client
-      ctx.waitUntil(logTokenUsageToD1(env, {
+      ctx.waitUntil(logTokenUsageToKV(env, {
         timestamp: requestTime,
         model: aiData.model || "Qwen/QwQ-32B",
         question_type: question ? "specific" : "general",
@@ -183,28 +183,71 @@ async function handleInterpretation(request, env, ctx) {
   }
 }
 
-// Function to log token usage to D1 database
-async function logTokenUsageToD1(env, usageData) {
+// Function to log token usage to KV
+async function logTokenUsageToKV(env, usageData) {
   try {
-    // Insert token usage data into the D1 database
-    await env.DB.prepare(
-      `INSERT INTO token_usage (
-        timestamp, model, question_type, cards_count, 
-        prompt_tokens, completion_tokens, total_tokens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      usageData.timestamp,
-      usageData.model,
-      usageData.question_type,
-      usageData.cards_count,
-      usageData.prompt_tokens,
-      usageData.completion_tokens,
-      usageData.total_tokens
-    ).run();
+    // Create a unique key for this log entry
+    const logKey = `log_${usageData.timestamp}_${Math.random().toString(36).substring(2, 15)}`;
     
-    console.log("Token usage data successfully logged to D1 database");
+    // Store the usage data in KV
+    await env.TOKEN_LOGS.put(logKey, JSON.stringify(usageData));
+    
+    // Also update aggregated stats
+    await updateAggregatedStats(env, usageData);
+    
+    console.log("Token usage data successfully logged to KV");
   } catch (error) {
-    console.error("Error logging to D1 database:", error);
+    console.error("Error logging to KV:", error);
+  }
+}
+
+// Function to update aggregated statistics
+async function updateAggregatedStats(env, usageData) {
+  try {
+    // Get the current date in YYYY-MM-DD format for daily stats
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Keys for different time periods
+    const dailyKey = `daily_${today}`;
+    const allTimeKey = 'all_time_stats';
+    
+    // Update daily stats
+    const dailyStatsJSON = await env.TOKEN_LOGS.get(dailyKey);
+    let dailyStats = dailyStatsJSON ? JSON.parse(dailyStatsJSON) : {
+      date: today,
+      request_count: 0,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0
+    };
+    
+    dailyStats.request_count++;
+    dailyStats.prompt_tokens += usageData.prompt_tokens;
+    dailyStats.completion_tokens += usageData.completion_tokens;
+    dailyStats.total_tokens += usageData.total_tokens;
+    
+    await env.TOKEN_LOGS.put(dailyKey, JSON.stringify(dailyStats));
+    
+    // Update all-time stats
+    const allTimeStatsJSON = await env.TOKEN_LOGS.get(allTimeKey);
+    let allTimeStats = allTimeStatsJSON ? JSON.parse(allTimeStatsJSON) : {
+      request_count: 0,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      first_request: usageData.timestamp
+    };
+    
+    allTimeStats.request_count++;
+    allTimeStats.prompt_tokens += usageData.prompt_tokens;
+    allTimeStats.completion_tokens += usageData.completion_tokens;
+    allTimeStats.total_tokens += usageData.total_tokens;
+    allTimeStats.last_request = usageData.timestamp;
+    
+    await env.TOKEN_LOGS.put(allTimeKey, JSON.stringify(allTimeStats));
+    
+  } catch (error) {
+    console.error("Error updating aggregated stats:", error);
   }
 }
 
@@ -213,59 +256,74 @@ async function handleTokenStats(request, env) {
   try {
     // Query parameters
     const url = new URL(request.url);
-    const period = url.searchParams.get('period') || 'day'; // day, week, month
+    const period = url.searchParams.get('period') || 'day'; // day, week, month, all
     
-    let timeFilter;
-    const now = new Date();
-    
-    // Set time filter based on period
-    if (period === 'day') {
-      // Last 24 hours
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-      timeFilter = `timestamp >= '${oneDayAgo}'`;
-    } else if (period === 'week') {
-      // Last 7 days
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      timeFilter = `timestamp >= '${oneWeekAgo}'`;
-    } else if (period === 'month') {
-      // Last 30 days
-      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      timeFilter = `timestamp >= '${oneMonthAgo}'`;
-    } else {
-      // All time
-      timeFilter = "1=1";
+    if (period === 'all') {
+      // Return all-time stats
+      const allTimeStatsJSON = await env.TOKEN_LOGS.get('all_time_stats');
+      const allTimeStats = allTimeStatsJSON ? JSON.parse(allTimeStatsJSON) : {
+        request_count: 0,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      };
+      
+      return new Response(
+        JSON.stringify({
+          period: 'all',
+          total: allTimeStats,
+          daily: []
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
+      );
     }
     
-    // Get total usage stats
-    const totalStats = await env.DB.prepare(
-      `SELECT 
-        COUNT(*) as request_count,
-        SUM(prompt_tokens) as total_prompt_tokens,
-        SUM(completion_tokens) as total_completion_tokens,
-        SUM(total_tokens) as total_tokens
-      FROM token_usage
-      WHERE ${timeFilter}`
-    ).all();
+    // For specific time periods, we need to get the daily stats
+    const now = new Date();
+    const dailyStats = [];
     
-    // Get daily usage stats
-    const dailyStats = await env.DB.prepare(
-      `SELECT 
-        date(timestamp) as date,
-        COUNT(*) as request_count,
-        SUM(prompt_tokens) as prompt_tokens,
-        SUM(completion_tokens) as completion_tokens,
-        SUM(total_tokens) as total_tokens
-      FROM token_usage
-      WHERE ${timeFilter}
-      GROUP BY date(timestamp)
-      ORDER BY date(timestamp) DESC`
-    ).all();
+    // Calculate the number of days to fetch based on period
+    let daysToFetch = 1;
+    if (period === 'week') daysToFetch = 7;
+    if (period === 'month') daysToFetch = 30;
+    
+    // Fetch daily stats for the specified period
+    for (let i = 0; i < daysToFetch; i++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dailyKey = `daily_${dateStr}`;
+      
+      const dailyStatsJSON = await env.TOKEN_LOGS.get(dailyKey);
+      if (dailyStatsJSON) {
+        dailyStats.push(JSON.parse(dailyStatsJSON));
+      }
+    }
+    
+    // Calculate totals for the period
+    const totalStats = dailyStats.reduce((acc, day) => {
+      acc.request_count += day.request_count;
+      acc.prompt_tokens += day.prompt_tokens;
+      acc.completion_tokens += day.completion_tokens;
+      acc.total_tokens += day.total_tokens;
+      return acc;
+    }, {
+      request_count: 0,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0
+    });
     
     return new Response(
       JSON.stringify({
         period: period,
-        total: totalStats.results[0],
-        daily: dailyStats.results
+        total: totalStats,
+        daily: dailyStats
       }),
       {
         headers: {
