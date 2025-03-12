@@ -1,11 +1,3 @@
-/**
- * Cloudflare Worker for tarot card interpretation
- * With fixed CORS implementation
- */
-
-// Define your API key as a secret in Cloudflare Workers
-// You'll need to set this in the Cloudflare Dashboard or with Wrangler CLI
-// wrangler secret put API_KEY
 
 // The AI API URL
 const AI_API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
