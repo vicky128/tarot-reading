@@ -201,7 +201,6 @@ body {
 
 .ai-response {
     height: auto; 
-    overflow-y: auto; 
     background: rgba(0, 0, 0, 0.5);
     padding: 15px;
     border-radius: 10px;
@@ -209,15 +208,14 @@ body {
     font-size: 14px;
     line-height: 1.6;
     margin-top: 10px;
-    /* word-wrap: break-word; */
-    /* Ensure text wraps */
+    word-wrap: break-word; /* Uncomment this */
     max-height: none;
-    /* Remove any height restriction */
     overflow: visible;
     white-space: pre-wrap;
-    /* display: none; */
+    width: 100%; /* Add this to ensure it uses the full width */
+    box-sizing: border-box; /* Add this to include padding in width calculation */
+    overflow-x: hidden; /* Add this to hide horizontal scrollbar */
 }
-
 .chat-container::-webkit-scrollbar {
     width: 8px;
 }
