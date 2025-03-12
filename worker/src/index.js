@@ -115,7 +115,7 @@ async function handleInterpretation(request, env) {
     const interpretationResult = aiData.choices[0].message.content;
     
     // Log token usage to console
-    // console.log("AI API 响应:", JSON.stringify(aiData, null, 2));
+    console.log("AI API 响应:", JSON.stringify(aiData, null, 2));
     
     if (aiData.usage) {
       console.log(`Token使用: ${JSON.stringify(aiData.usage)}`);
