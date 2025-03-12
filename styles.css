@@ -6,13 +6,11 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    height: 100vh;
-    padding-top: 20px;
-    overflow: hidden;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
     font-family: Arial, sans-serif;
-    
-    /* word-break: break-word; */
-   
+    overflow-x: hidden;
 }
 
 .main-button {
@@ -54,7 +52,8 @@ body {
 .card-container {
     display: none;
     position: relative;
-    width: 1200px;
+    width: 90%;
+    max-width: 1200px;
     height: 450px;
     margin-top: -100px;
 }
@@ -78,23 +77,17 @@ body {
     filter: brightness(1.2);
 }
 
-/* 调整已抽卡牌容器位置 */
 .drawn-card-container {
     display: flex;
     justify-content: center;
     gap: 20px;
     flex-wrap: wrap;
     width: 100%;
-    position: flex;
-
-    /* bottom: 50px; */
-    /* 上移留出对话框空间 */
-    left: 0;
-    right: 0;
-    z-index: 1001;
-    /* 确保在对话框之上 */
+    position: relative;
     margin-top: -40px;
-
+    z-index: 1001;
+    padding: 0 10px;
+    box-sizing: border-box;
 }
 
 .drawn-card-wrapper {
@@ -108,7 +101,6 @@ body {
         transform: translateY(20px);
         opacity: 0;
     }
-
     to {
         transform: translateY(0);
         opacity: 1;
@@ -151,37 +143,26 @@ body {
     background: rgba(118, 112, 112, 0.9);
     color: white;
     padding: 8px;
-    /* 减少内边距 */
     border-radius: 6px;
-    /* 稍小的圆角 */
     display: none;
     min-width: 140px;
-    /* 最小宽度比卡牌大 */
     max-width: 500px;
     bottom: -40px;
-    /* 调整位置 */
     left: 50%;
     transform: translateX(-50%);
     white-space: normal;
     font-size: 13px;
-    /* 稍小的字号 */
     line-height: 1.4;
-    /* 紧凑的行高 */
     z-index: 1500;
     box-sizing: border-box;
-    /* 确保宽度计算包含padding */
     border: 2px solid rgba(255, 255, 255, 0.2);
-    /* 添加边框 */
-    /* 添加文字阴影提升可读性 */
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    /*box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);*/
 }
 
 .chat-container {
     position: fixed;
-    top: 620px; 
+    top: 620px;
     bottom: 20px;
-    /* Lowered position to provide more space */
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
@@ -195,11 +176,8 @@ body {
     flex-direction: column;
     gap: 10px;
     max-height: 500px;
-    /* Increased max height */
     overflow-y: auto;
-    /* Allow scrolling */
-    /* margin-top: 600px; */
-
+    box-sizing: border-box;
 }
 
 .chat-input {
@@ -219,11 +197,9 @@ body {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-
 }
 
 .ai-response {
-    /* width: 80%; */
     height: auto; 
     overflow-y: auto; 
     background: rgba(0, 0, 0, 0.5);
@@ -238,13 +214,10 @@ body {
     max-height: none;
     /* Remove any height restriction */
     overflow: visible;
-    /* Make content fully visible */
-    display: none;
-    /* 换行处理 */
     white-space: pre-wrap;
+    /* display: none; */
 }
 
-/* 定义滚动条样式 */
 .chat-container::-webkit-scrollbar {
     width: 8px;
 }
@@ -269,26 +242,15 @@ body {
 }
 
 @keyframes dots {
-
-    0%,
-    20% {
+    0%, 20% {
         content: '.';
     }
-
     40% {
         content: '..';
     }
-
-    60%,
-    100% {
+    60%, 100% {
         content: '...';
     }
-}
-
-/* Adjust drawn card container position to make space for chat */
-.drawn-card-container {
-    bottom: 550px;
-    /* Increase bottom margin to prevent overlap */
 }
 
 .limit-message {
@@ -304,38 +266,31 @@ body {
     z-index: 2000;
 }
 
-/* Card drawing animation */
 @keyframes drawFromDeck {
     0% {
         transform: translate(0, 0) rotate(0deg);
         opacity: 1;
     }
-
     50% {
         transform: translate(-20%, 20%) rotate(10deg);
         opacity: 1;
     }
-
     100% {
         transform: translate(-300%, 100%) rotate(0deg);
         opacity: 0;
     }
 }
 
-/* Card flip animation */
 @keyframes flipCard {
     0% {
         transform: rotateY(0deg);
     }
-
     49% {
         transform: rotateY(90deg);
     }
-
     51% {
         transform: rotateY(270deg);
     }
-
     100% {
         transform: rotateY(360deg);
     }
