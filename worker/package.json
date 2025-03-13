@@ -5,5 +5,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.5.0"
   }
 }
